@@ -7,6 +7,7 @@ import { getInput } from 'action-input-parser'
 const REPLACE_DEFAULT = true
 const TEMPLATE_DEFAULT = false
 const DELETE_ORPHANED_DEFAULT = false
+const DELETE_DEFAULT = false
 
 let context
 
@@ -183,19 +184,30 @@ const parseFiles = (files) => {
 		if (typeof item === 'string')
 			item = { source: item }
 
-		if (item.source !== undefined) {
+		// For delete operations, source is optional - only dest is required
+		if (item.source !== undefined || item.delete === true) {
+			const dest = item.dest || item.source
+			
+			// For delete operations, dest must be specified if source is not provided
+			if (item.delete === true && !dest) {
+				core.warning('Delete operation requires either source or dest to be specified')
+				return undefined
+			}
+			
 			return {
 				source: item.source,
-				dest: item.dest || item.source,
+				dest: dest,
 				template: item.template === undefined ? TEMPLATE_DEFAULT : item.template,
 				replace: item.replace === undefined ? REPLACE_DEFAULT : item.replace,
 				deleteOrphaned: item.deleteOrphaned === undefined ? DELETE_ORPHANED_DEFAULT : item.deleteOrphaned,
+				delete: item.delete === undefined ? DELETE_DEFAULT : item.delete,
 				exclude: parseExclude(item.exclude, item.source)
 			}
 		}
 
 		core.warning('Warn: No source files specified')
-	})
+		return undefined
+	}).filter(item => item !== undefined)
 }
 
 export async function parseConfig() {

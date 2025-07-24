@@ -2,7 +2,7 @@ import * as core from '@actions/core'
 import * as fs from 'fs'
 
 import Git from './git.js'
-import { forEach, dedent, addTrailingSlash, pathIsDirectory, copy, remove, arrayEquals } from './helpers.js'
+import { forEach, dedent, addTrailingSlash, pathIsDirectory, copy, remove, deleteFile, arrayEquals } from './helpers.js'
 
 import { parseConfig, default as config } from './config.js'
 
@@ -60,10 +60,43 @@ async function run() {
 
 			// Loop through all selected files of the source repo
 			await forEach(item.files, async (file) => {
+				const localDestination = `${ git.workingDir }/${ file.dest }`
+
+				// Handle file deletion
+				if (file.delete === true) {
+					const destExists = fs.existsSync(localDestination)
+					if (!destExists) {
+						core.warning(`Cannot delete ${ file.dest } - file does not exist in target repository`)
+						return
+					}
+
+					core.info(`Deleting ${ file.dest } from target repository`)
+					await deleteFile(localDestination)
+					await git.add(file.dest)
+
+					// Commit deletion if committing each file separately
+					if (COMMIT_EACH_FILE === true) {
+						const hasChanges = await git.hasChanges()
+						if (hasChanges === false) return core.debug('No deletion changes to commit')
+
+						core.debug(`Creating commit for deletion of ${ file.dest }`)
+						const useOriginalCommitMessage = ORIGINAL_MESSAGE && git.isOneCommitPush()
+						const commitMessage = useOriginalCommitMessage ? git.originalCommitMessage() : `${ COMMIT_PREFIX } deleted '${ file.dest }' from target repository`
+						
+						await git.commit(commitMessage)
+						modified.push({
+							dest: file.dest,
+							source: file.source || 'N/A',
+							message: `deleted <code>${ file.dest }</code> from target repository`,
+							useOriginalMessage: useOriginalCommitMessage,
+							commitMessage: commitMessage
+						})
+					}
+					return
+				}
+
 				const fileExists = fs.existsSync(file.source)
 				if (fileExists === false) return core.warning(`Source ${ file.source } not found`)
-
-				const localDestination = `${ git.workingDir }/${ file.dest }`
 
 				const destExists = fs.existsSync(localDestination)
 				if (destExists === true && file.replace === false) return core.warning(`File(s) already exist(s) in destination and 'replace' option is set to false`)

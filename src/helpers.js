@@ -77,6 +77,11 @@ export async function write(src, dest, context) {
 	await fs.outputFile(dest, content)
 }
 
+export async function deleteFile(dest) {
+	core.debug(`Deleting file/directory ${ dest }`)
+	return fs.remove(dest)
+}
+
 export async function copy(src, dest, isDirectory, file) {
 	const deleteOrphaned = isDirectory && file.deleteOrphaned
 	const exclude = file.exclude
