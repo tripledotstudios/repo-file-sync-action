@@ -75,6 +75,7 @@ export async function write(src, dest, context) {
 	}
 	const content = nunjucks.render(src, context)
 	await fs.outputFile(dest, content)
+	return content
 }
 
 export async function deleteFile(dest) {
@@ -85,6 +86,7 @@ export async function deleteFile(dest) {
 export async function copy(src, dest, isDirectory, file) {
 	const deleteOrphaned = isDirectory && file.deleteOrphaned
 	const exclude = file.exclude
+	const renderedFiles = []
 
 	const filterFunc = (file) => {
 
@@ -126,12 +128,14 @@ export async function copy(src, dest, isDirectory, file) {
 
 				const srcPath = path.join(src, srcFile)
 				const destPath = path.join(dest, srcFile)
-				await write(srcPath, destPath, file.template)
+				const content = await write(srcPath, destPath, file.template)
+				renderedFiles.push({ path: srcFile, content })
 			}
 		} else {
 			core.debug(`Render file ${ src } to ${ dest }`)
 
-			await write(src, dest, file.template)
+			const content = await write(src, dest, file.template)
+			renderedFiles.push({ path: dest, content })
 		}
 	} else {
 		core.debug(`Copy ${ src } to ${ dest }`)
@@ -146,7 +150,7 @@ export async function copy(src, dest, isDirectory, file) {
 		const destFileList = await readfiles(dest, { readContents: false, hidden: true })
 
 		for (const destFile of destFileList) {
-			if (destFile.startsWith('.git')) return
+			if (destFile.startsWith('.git')) return renderedFiles
 			if (srcFileList.indexOf(destFile) === -1) {
 				const filePath = path.join(dest, destFile)
 				core.debug(`Found an orphaned file in the target repo - ${ filePath }`)
@@ -160,6 +164,8 @@ export async function copy(src, dest, isDirectory, file) {
 			}
 		}
 	}
+
+	return renderedFiles
 }
 
 export async function remove(src) {
