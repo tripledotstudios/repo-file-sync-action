@@ -105,7 +105,24 @@ async function run() {
 				const source = isDirectory ? `${ addTrailingSlash(file.source) }` : file.source
 				const dest = isDirectory ? `${ addTrailingSlash(localDestination) }` : localDestination
 
-				if (isDirectory) core.info(`Source is directory`)
+				if (isDirectory) {
+					core.info(`Source is directory`)
+				}
+
+				// Log what we're about to do
+				if (file.template) {
+					if (isDirectory) {
+						core.info(`Rendering templates from ${ file.source } to ${ file.dest }`)
+					} else {
+						core.info(`Rendering template ${ file.source } to ${ file.dest }`)
+					}
+				} else {
+					if (isDirectory) {
+						core.info(`Copying directory ${ file.source } to ${ file.dest }`)
+					} else {
+						core.info(`Copying file ${ file.source } to ${ file.dest }`)
+					}
+				}
 
 				// Enhance template context with repo metadata
 				let fileWithRepoContext = file
@@ -128,7 +145,10 @@ async function run() {
 				if (COMMIT_EACH_FILE === true) {
 					const hasChanges = await git.hasChanges()
 
-					if (hasChanges === false) return core.debug('File(s) already up to date')
+					if (hasChanges === false) {
+						core.info('File(s) already up to date')
+						return
+					}
 
 					core.debug(`Creating commit for file(s) ${ file.dest }`)
 
@@ -163,8 +183,8 @@ async function run() {
 			if (DRY_RUN) {
 				core.warning('Dry run, no changes will be pushed')
 
-				core.debug('Git Status:')
-				core.debug(await git.status())
+				core.info('Git Status:')
+				core.info(await git.status())
 
 				return
 			}
