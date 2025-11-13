@@ -82,7 +82,7 @@ async function run() {
 						core.debug(`Creating commit for deletion of ${ file.dest }`)
 						const useOriginalCommitMessage = ORIGINAL_MESSAGE && git.isOneCommitPush()
 						const commitMessage = useOriginalCommitMessage ? git.originalCommitMessage() : `${ COMMIT_PREFIX } deleted '${ file.dest }' from target repository`
-						
+
 						await git.commit(commitMessage)
 						modified.push({
 							dest: file.dest,
@@ -107,7 +107,20 @@ async function run() {
 
 				if (isDirectory) core.info(`Source is directory`)
 
-				await copy(source, dest, isDirectory, file)
+				// Enhance template context with repo metadata
+				let fileWithRepoContext = file
+				if (file.template) {
+					const templateContext = typeof file.template === 'object' ? file.template : {}
+					fileWithRepoContext = {
+						...file,
+						template: {
+							...templateContext,
+							repo: item.repo
+						}
+					}
+				}
+
+				await copy(source, dest, isDirectory, fileWithRepoContext)
 
 				await git.add(file.dest)
 

@@ -40,6 +40,9 @@ The action supports both Personal Access Tokens (GH_PAT) and GitHub App Installa
 
 - Individual files or entire directories
 - Template rendering with Nunjucks (Jinja-style syntax)
+  - Repository metadata automatically injected into template context via `repo` object
+  - Available properties: `repo.name`, `repo.user`, `repo.fullName`, `repo.uniqueName`, `repo.host`, `repo.branch`
+  - Allows per-repository customization using Nunjucks conditionals and filters
 - Exclude patterns for directory syncing
 - Delete orphaned files option
 - File deletion with `delete: true` option

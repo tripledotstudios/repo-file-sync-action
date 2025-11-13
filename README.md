@@ -253,6 +253,52 @@ This is some content
 {% endblock %}
 ```
 
+#### Repository metadata in templates
+
+When using templates, repository metadata is automatically available through the `repo` object. This allows you to customize content based on the target repository:
+
+```yml
+group:
+  repos: |
+    user/repo1
+    user/repo2
+  files:
+    - source: README.md
+      template:
+        configs:
+          user/repo1: "config-a"
+          user/repo2: "config-b"
+        default_config: "config-default"
+```
+
+In your template file:
+
+```jinja
+# {{ repo.name }}
+
+Repository: {{ repo.fullName }}
+Branch: {{ repo.branch }}
+Owner: {{ repo.user }}
+
+{# Use fallback logic with the default filter #}
+Config: {{ configs[repo.user ~ '/' ~ repo.name] | default(default_config) }}
+
+{# Or use conditionals #}
+{% if repo.name == "repo1" %}
+Special configuration for repo1
+{% else %}
+Standard configuration
+{% endif %}
+```
+
+Available repo properties:
+- `repo.name` - Repository name
+- `repo.user` - Repository owner/user
+- `repo.fullName` - Full repository path (e.g., `github.com/user/repo`)
+- `repo.uniqueName` - Full repository path with branch (e.g., `github.com/user/repo@main`)
+- `repo.host` - Git host (e.g., `github.com`)
+- `repo.branch` - Target branch
+
 ### Delete orphaned files
 
 With the `deleteOrphaned` option you can choose to delete files in the target repository if they are deleted in the source repository. The option defaults to `false` and only works when [syncing entire directories](#sync-entire-directories):
