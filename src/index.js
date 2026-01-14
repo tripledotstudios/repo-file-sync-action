@@ -139,14 +139,17 @@ async function run() {
 
 				const renderedFiles = await copy(source, dest, isDirectory, fileWithRepoContext)
 
-				// In dry-run mode, output rendered template content
+				// In dry-run mode, output rendered template content only for changed files
 				if (DRY_RUN && file.template && renderedFiles.length > 0) {
-					core.info('\n--- Rendered Template Content ---')
-					for (const rendered of renderedFiles) {
-						core.info(`\nFile: ${ rendered.path }`)
-						core.info('---')
-						core.info(rendered.content)
-						core.info('---')
+					const changedFiles = renderedFiles.filter((f) => f.changed)
+					if (changedFiles.length > 0) {
+						core.info('\n--- Rendered Template Content ---')
+						for (const rendered of changedFiles) {
+							core.info(`\nFile: ${ rendered.path }`)
+							core.info('---')
+							core.info(rendered.content)
+							core.info('---')
+						}
 					}
 				}
 

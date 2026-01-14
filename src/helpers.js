@@ -74,8 +74,19 @@ export async function write(src, dest, context) {
 		context = {}
 	}
 	const content = nunjucks.render(src, context)
+
+	// Check if destination file exists and has same content - skip writing if unchanged
+	const destExists = await fs.pathExists(dest)
+	if (destExists) {
+		const existingContent = await fs.readFile(dest, 'utf8')
+		if (existingContent === content) {
+			core.debug(`Skipping ${ dest } - content unchanged`)
+			return { content, changed: false }
+		}
+	}
+
 	await fs.outputFile(dest, content)
-	return content
+	return { content, changed: true }
 }
 
 export async function deleteFile(dest) {
@@ -128,14 +139,14 @@ export async function copy(src, dest, isDirectory, file) {
 
 				const srcPath = path.join(src, srcFile)
 				const destPath = path.join(dest, srcFile)
-				const content = await write(srcPath, destPath, file.template)
-				renderedFiles.push({ path: srcFile, content })
+				const result = await write(srcPath, destPath, file.template)
+				renderedFiles.push({ path: srcFile, content: result.content, changed: result.changed })
 			}
 		} else {
 			core.debug(`Render file ${ src } to ${ dest }`)
 
-			const content = await write(src, dest, file.template)
-			renderedFiles.push({ path: dest, content })
+			const result = await write(src, dest, file.template)
+			renderedFiles.push({ path: dest, content: result.content, changed: result.changed })
 		}
 	} else {
 		core.debug(`Copy ${ src } to ${ dest }`)
